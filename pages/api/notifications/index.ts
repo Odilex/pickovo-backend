@@ -56,7 +56,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       // Get total count for pagination
       const { count: totalCount, error: countError } = await supabase
         .from('notifications')
-        .count()
+        .select('*', { count: 'exact', head: true })
         .eq('user_id', userId);
         
       if (countError) {
@@ -66,7 +66,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       // Get unread count
       const { count: unreadCount, error: unreadError } = await supabase
         .from('notifications')
-        .count()
+        .select('*', { count: 'exact', head: true })
         .eq('user_id', userId)
         .eq('is_read', false);
         
@@ -76,9 +76,9 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       
       return res.status(200).json({
         data,
-        unread_count: unreadCount ? unreadCount[0].count : 0,
+        unread_count: unreadCount ?? 0,
         pagination: {
-          total: totalCount ? totalCount[0].count : 0,
+          total: totalCount ?? 0,
           offset: Number(offset),
           limit: Number(limit)
         }

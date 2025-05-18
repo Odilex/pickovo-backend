@@ -72,7 +72,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       // Get total count for pagination
       const { count: totalCount, error: countError } = await supabase
         .from('wallet_transactions')
-        .count()
+        .select('*', { count: 'exact', head: true })
         .eq('user_id', userId);
         
       if (countError) {
@@ -83,7 +83,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
         balance,
         transactions,
         pagination: {
-          total: totalCount ? totalCount[0].count : 0,
+          total: totalCount ?? 0,
           offset: Number(offset),
           limit: Number(limit)
         }
