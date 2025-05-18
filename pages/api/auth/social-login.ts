@@ -1,31 +1,22 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { supabase } from '../../../lib/supabase';
 
-/**
- * API endpoint to handle social authentication
- * 
- * @param req - Next.js API request
- * @param res - Next.js API response
- */
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  // Only allow POST requests
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
   try {
     const { provider, access_token, id_token } = req.body;
-    
-    // Validate required fields
+
     if (!provider || (!access_token && !id_token)) {
-      return res.status(400).json({ 
-        error: 'Provider and either access_token or id_token are required' 
+      return res.status(400).json({
+        error: 'Provider and either access_token or id_token are required'
       });
     }
-    
-    // Handle different social providers
+
     let authResponse;
-    
+
     if (provider === 'google') {
       authResponse = await supabase.auth.signInWithIdToken({
         provider: 'google',
@@ -41,7 +32,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     } else {
       return res.status(400).json({ error: 'Unsupported provider' });
     }
-    
+
     const { data, error } = authResponse;
 
     if (error) {
@@ -49,17 +40,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(401).json({ error: error.message });
     }
 
-    // Handle the two possible shapes of 'data'
     if ('user' in data && data.user) {
-      // Check if profile exists, if not create one
       const { data: profile, error: profileError } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', data.user.id)
         .single();
 
-      if (profileError && profileError.code === 'PGRST116') { // No profile found
-        // Create profile for the user
+      if (profileError && profileError.code === 'PGRST116') {
         await supabase
           .from('profiles')
           .insert({
@@ -72,7 +60,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             updated_at: new Date().toISOString()
           });
 
-        // Create wallet for the user
         await supabase
           .from('wallets')
           .insert({
@@ -83,19 +70,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           });
       }
 
-      // Return the user data and session
       return res.status(200).json({
         user: data.user,
         session: data.session
       });
     } else if ('provider' in data && 'url' in data) {
-      // OAuth flow requires redirect
       return res.status(200).json({
         provider: data.provider,
         url: data.url
       });
     } else {
-      // Unexpected data shape
       return res.status(500).json({ error: 'Unexpected authentication response' });
     }
   } catch (error) {
