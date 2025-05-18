@@ -43,22 +43,23 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
     
     const { data, error } = authResponse;
-    
+
     if (error) {
       console.error(`Error signing in with ${provider}:`, error);
       return res.status(401).json({ error: error.message });
     }
-    
-    // Check if profile exists, if not create one
-    const { data: profile, error: profileError } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', data.user?.id)
-      .single();
-    
-    if (profileError && profileError.code === 'PGRST116') { // No profile found
-      // Create profile for the user
-      if (data.user) {
+
+    // Handle the two possible shapes of 'data'
+    if ('user' in data && data.user) {
+      // Check if profile exists, if not create one
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', data.user.id)
+        .single();
+
+      if (profileError && profileError.code === 'PGRST116') { // No profile found
+        // Create profile for the user
         await supabase
           .from('profiles')
           .insert({
@@ -70,7 +71,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString()
           });
-          
+
         // Create wallet for the user
         await supabase
           .from('wallets')
@@ -81,13 +82,22 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             updated_at: new Date().toISOString()
           });
       }
+
+      // Return the user data and session
+      return res.status(200).json({
+        user: data.user,
+        session: data.session
+      });
+    } else if ('provider' in data && 'url' in data) {
+      // OAuth flow requires redirect
+      return res.status(200).json({
+        provider: data.provider,
+        url: data.url
+      });
+    } else {
+      // Unexpected data shape
+      return res.status(500).json({ error: 'Unexpected authentication response' });
     }
-    
-    // Return the user data and session
-    return res.status(200).json({
-      user: data.user,
-      session: data.session
-    });
   } catch (error) {
     console.error('Error in social-login endpoint:', error);
     return res.status(500).json({ error: 'Internal server error' });
