@@ -80,7 +80,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // Get total count for pagination
     const { count: totalCount, error: countError } = await supabase
       .from('mechanics')
-      .count()
+      .select('*', { count: 'exact', head: true })
       .eq('is_available', true);
       
     if (countError) {
@@ -115,7 +115,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(200).json({
       data: filteredData,
       pagination: {
-        total: totalCount ? totalCount[0].count : 0,
+        total: totalCount ? totalCount : 0,
         offset: Number(offset),
         limit: Number(limit)
       }
