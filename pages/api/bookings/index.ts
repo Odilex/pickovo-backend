@@ -55,7 +55,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       // Get total count for pagination
       const { count: totalCount, error: countError } = await supabase
         .from('bookings')
-        .count()
+        .select('*', { count: 'exact', head: true })
         .eq('customer_id', userId);
         
       if (countError) {
@@ -65,7 +65,7 @@ async function handler(req: NextApiRequest, res: NextApiResponse) {
       return res.status(200).json({
         data,
         pagination: {
-          total: totalCount ? totalCount[0].count : 0,
+          total: totalCount ?? 0,
           offset: Number(offset),
           limit: Number(limit)
         }
