@@ -22,14 +22,62 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
     
     // Authenticate the user with Supabase Auth
-    const { data, error } = await supabase.auth.signInWithPassword({
+    let { data, error } = await supabase.auth.signInWithPassword({
       email,
       password
     });
     
-    if (error) {
+    // Handle email confirmation error
+    if (error && error.message.includes('Email not confirmed')) {
+      console.log('Email not confirmed, attempting to confirm automatically...');
+      
+      // Find the user by email
+      const { data: userData, error: userError } = await supabase.auth.admin.listUsers();
+      
+      if (userError) {
+        console.error('Error listing users:', userError);
+        return res.status(401).json({ error: error.message });
+      }
+      
+      // Find the user with matching email
+      const user = userData.users.find(u => u.email === email);
+      
+      if (user) {
+        // Confirm the email
+        const { error: confirmError } = await supabase.auth.admin.updateUserById(
+          user.id,
+          { email_confirm: true }
+        );
+        
+        if (confirmError) {
+          console.error('Error confirming email:', confirmError);
+          return res.status(401).json({ error: error.message });
+        }
+        
+        // Try logging in again
+        const loginResult = await supabase.auth.signInWithPassword({
+          email,
+          password
+        });
+        
+        if (loginResult.error) {
+          console.error('Error logging in after email confirmation:', loginResult.error);
+          return res.status(401).json({ error: loginResult.error.message });
+        }
+        
+        data = loginResult.data;
+      } else {
+        return res.status(401).json({ error: 'User not found' });
+      }
+    } else if (error) {
       console.error('Error logging in:', error);
       return res.status(401).json({ error: error.message });
+    }
+    
+    // Make sure we have user and session data
+    if (!data.user || !data.session) {
+      console.error('Missing user or session data after successful login');
+      return res.status(500).json({ error: 'Authentication succeeded but user data is missing' });
     }
     
     // Get user profile data
