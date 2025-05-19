@@ -30,7 +30,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           first_name,
           last_name,
           phone_number
-        }
+        },
+        // Disable email confirmation requirement
+        emailRedirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/auth/callback`
       }
     });
     
@@ -60,6 +62,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
       
       // Create an empty wallet for the user
+      // Using service role to bypass RLS policies
       const { error: walletError } = await supabase
         .from('wallets')
         .insert({
@@ -72,6 +75,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       if (walletError) {
         console.error('Error creating user wallet:', walletError);
         // Again, log but don't return an error
+      }
+      
+      // Automatically confirm the user's email
+      const { error: confirmError } = await supabase.auth.admin.updateUserById(
+        authData.user.id,
+        { email_confirm: true }
+      );
+      
+      if (confirmError) {
+        console.error('Error confirming user email:', confirmError);
+        // Log but don't return an error
       }
     }
     
