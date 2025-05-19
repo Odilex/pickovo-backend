@@ -15,3 +15,8 @@ export default function handler(req: NextApiRequest, res: NextApiResponse) {
     }
   });
 }
+
+// Configure the API endpoint to use Edge Runtime
+export const config = {
+  runtime: 'edge',
+};
