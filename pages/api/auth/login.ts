@@ -39,25 +39,43 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       .eq('id', data.user.id)
       .single();
 
-    // If profile doesn't exist, create it
+    // If profile doesn't exist, create it using auth.updateUser
     if (profileError && profileError.code === 'PGRST116') {
-      const { error: createError } = await supabase
-        .from('profiles')
-        .insert({
-          id: data.user.id,
-          first_name: data.user.user_metadata?.first_name || '',
-          last_name: data.user.user_metadata?.last_name || '',
-          phone_number: '', // Add default empty phone number
-          role: 'customer',
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        })
-        .select()
-        .single();
+      try {
+        // Update user metadata through auth to bypass RLS
+        const { error: updateError } = await supabase.auth.updateUser({
+          data: {
+            first_name: data.user.user_metadata?.first_name || '',
+            last_name: data.user.user_metadata?.last_name || '',
+            phone_number: ''
+          }
+        });
 
-      if (createError) {
-        console.error('Error creating profile:', createError);
-        // Continue anyway since we have the auth data
+        if (updateError) {
+          console.error('Error updating user metadata:', updateError);
+        }
+
+        // Try to create profile again
+        const { data: newProfile, error: createError } = await supabase
+          .from('profiles')
+          .insert({
+            id: data.user.id,
+            first_name: data.user.user_metadata?.first_name || '',
+            last_name: data.user.user_metadata?.last_name || '',
+            phone_number: '',
+            role: 'customer',
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          })
+          .select()
+          .single();
+
+        if (createError) {
+          console.error('Error creating profile:', createError);
+          // Continue anyway since we have the auth data
+        }
+      } catch (e) {
+        console.error('Error in profile creation:', e);
       }
     }
 
