@@ -31,6 +31,48 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     if (profileError) {
       console.error('Error fetching user profile:', profileError);
+      
+      // Check if the error is because the profile doesn't exist
+      if (profileError.code === 'PGRST116') {
+        // Get the user's email from auth
+        const { data: authUser, error: authError } = await supabase.auth.getUser(userId);
+        
+        if (authError) {
+          console.error('Error fetching auth user:', authError);
+          return res.status(500).json({ error: 'Failed to fetch user data' });
+        }
+        
+        const email = authUser?.user?.email;
+        
+        // Create a new profile for the user
+        const { data: newProfile, error: insertError } = await supabase
+          .from('profiles')
+          .insert({
+            id: userId,
+            email: email,
+            first_name: '',
+            last_name: '',
+            phone_number: '',
+            role: 'customer',
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          })
+          .select()
+          .single();
+        
+        if (insertError) {
+          console.error('Error creating user profile:', insertError);
+          return res.status(500).json({ error: 'Failed to create user profile' });
+        }
+        
+        // Return the newly created profile
+        return res.status(200).json({
+          id: userId,
+          email: email,
+          profile: newProfile
+        });
+      }
+      
       return res.status(500).json({ error: 'Failed to fetch user profile' });
     }
 
