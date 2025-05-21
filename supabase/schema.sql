@@ -184,6 +184,14 @@ CREATE POLICY "Users can update their own profile"
   ON profiles FOR UPDATE
   USING (auth.uid() = id);
 
+CREATE POLICY "Service role can insert profiles"
+  ON profiles FOR INSERT
+  WITH CHECK (true);
+
+CREATE POLICY "Service role can update any profile"
+  ON profiles FOR UPDATE
+  USING (auth.jwt() ? 'service_role');
+
 -- Vehicles table policies
 ALTER TABLE vehicles ENABLE ROW LEVEL SECURITY;
 
