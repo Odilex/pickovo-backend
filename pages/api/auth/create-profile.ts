@@ -79,15 +79,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         message: 'Profile created successfully',
         profile: newProfile
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error in profile creation:', error);
+      // Return a proper JSON response even if there's an error
       return res.status(500).json({ 
-        error: error.message || 'Failed to create profile',
+        error: error instanceof Error ? error.message : String(error),
         success: false 
       });
     }
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error in create-profile endpoint:', error);
-    return res.status(500).json({ error: 'Internal server error' });
+    return res.status(500).json({ 
+      error: error instanceof Error ? error.message : String(error),
+      success: false 
+    });
   }
 }
