@@ -6,6 +6,7 @@ ALTER DATABASE postgres SET "app.jwt_secret" TO 'your-jwt-secret-here';
 -- Create profiles table (extends the default auth.users table)
 CREATE TABLE IF NOT EXISTS profiles (
   id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+  email TEXT,
   first_name TEXT,
   last_name TEXT,
   phone_number TEXT,

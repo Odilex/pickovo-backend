@@ -34,9 +34,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(500).json({ error: 'Failed to fetch user profile' });
     }
 
-    // Return user data
+    // Return user data with email from profile
     return res.status(200).json({
       id: userId,
+      email: profile.email,
       profile
     });
   } catch (error) {
