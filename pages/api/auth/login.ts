@@ -32,63 +32,32 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(401).json({ error: error.message });
     }
     
-    // First try to get profile
+    // Get or create user profile
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
       .select('*')
       .eq('id', data.user.id)
       .single();
 
-    // If profile doesn't exist, create it using the create-profile endpoint
+    // If profile doesn't exist, create it
     if (profileError && profileError.code === 'PGRST116') {
-      try {
-        // Get Supabase API key from environment
-        const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-        if (!supabaseKey) {
-          console.error('Supabase API key not found in environment variables');
-          return res.status(500).json({ error: 'Supabase API key not configured' });
-        }
+      const { error: createError } = await supabase
+        .from('profiles')
+        .insert({
+          id: data.user.id,
+          first_name: data.user.user_metadata?.first_name || '',
+          last_name: data.user.user_metadata?.last_name || '',
+          email: data.user.email,
+          role: 'customer',
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        })
+        .select()
+        .single();
 
-        // Call the create-profile endpoint
-        try {
-          const response = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/auth/create-profile`, {
-            method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${data.session.access_token}`,
-              'apikey': supabaseKey,
-              'Content-Type': 'application/json'
-            }
-          });
-
-          // Always try to get the response text first
-          const responseText = await response.text();
-          console.log('Profile creation response:', responseText);
-
-          if (!response.ok) {
-            try {
-              const error = JSON.parse(responseText);
-              console.error('Error creating profile:', error);
-              throw new Error(error.message || 'Failed to create profile');
-            } catch (e) {
-              console.error('Error parsing profile creation response:', e);
-              throw new Error('Failed to parse profile creation response');
-            }
-          } else {
-            try {
-              const data = JSON.parse(responseText);
-              console.log('Profile creation response data:', data);
-            } catch (e) {
-              console.error('Error parsing profile creation response:', e);
-              // If we can't parse JSON, just log it and continue
-              console.log('Raw response:', responseText);
-            }
-          }
-        } catch (e) {
-          console.error('Error calling create-profile endpoint:', e);
-          throw e;
-        }
-      } catch (e) {
-        console.error('Error calling create-profile endpoint:', e);
+      if (createError) {
+        console.error('Error creating profile:', createError);
+        // Continue anyway since we have the auth data
       }
     }
 
