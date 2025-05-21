@@ -32,37 +32,21 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(401).json({ error: error.message });
     }
     
-    // Get or create user profile
+    // First try to get profile
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
       .select('*')
       .eq('id', data.user.id)
       .single();
 
-    // If profile doesn't exist, create it using auth.updateUser
+    // If profile doesn't exist, create it
     if (profileError && profileError.code === 'PGRST116') {
       try {
-        // Update user metadata through auth to bypass RLS
-        const { error: updateError } = await supabase.auth.updateUser({
-          data: {
-            first_name: data.user.user_metadata?.first_name || '',
-            last_name: data.user.user_metadata?.last_name || '',
-            phone_number: ''
-          }
-        });
-
-        if (updateError) {
-          console.error('Error updating user metadata:', updateError);
-        }
-
-        // Try to create profile again
+        // First try to create profile with minimal data
         const { data: newProfile, error: createError } = await supabase
           .from('profiles')
           .insert({
             id: data.user.id,
-            first_name: data.user.user_metadata?.first_name || '',
-            last_name: data.user.user_metadata?.last_name || '',
-            phone_number: '',
             role: 'customer',
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString()
@@ -71,8 +55,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           .single();
 
         if (createError) {
-          console.error('Error creating profile:', createError);
-          // Continue anyway since we have the auth data
+          console.error('Error creating basic profile:', createError);
+          // Try updating metadata instead
+          const { error: updateError } = await supabase.auth.updateUser({
+            data: {
+              first_name: data.user.user_metadata?.first_name || '',
+              last_name: data.user.user_metadata?.last_name || '',
+              phone_number: ''
+            }
+          });
+
+          if (updateError) {
+            console.error('Error updating user metadata:', updateError);
+          }
         }
       } catch (e) {
         console.error('Error in profile creation:', e);
