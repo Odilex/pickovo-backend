@@ -58,26 +58,34 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     // Now try to create the profile
-    const { data: newProfile, error: profileCreateError } = await supabase
-      .from('profiles')
-      .insert({
-        id: user.id,
-        role: 'customer',
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      })
-      .select()
-      .single();
+    try {
+      const { data: newProfile, error: profileCreateError } = await supabase
+        .from('profiles')
+        .insert({
+          id: user.id,
+          role: 'customer',
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        })
+        .select()
+        .single();
 
-    if (profileCreateError) {
-      console.error('Error creating profile:', profileCreateError);
-      return res.status(500).json({ error: profileCreateError.message });
+      if (profileCreateError) {
+        console.error('Error creating profile:', profileCreateError);
+        throw profileCreateError;
+      }
+
+      return res.status(200).json({
+        message: 'Profile created successfully',
+        profile: newProfile
+      });
+    } catch (error) {
+      console.error('Error in profile creation:', error);
+      return res.status(500).json({ 
+        error: error.message || 'Failed to create profile',
+        success: false 
+      });
     }
-
-    return res.status(200).json({
-      message: 'Profile created successfully',
-      profile: newProfile
-    });
   } catch (error) {
     console.error('Error in create-profile endpoint:', error);
     return res.status(500).json({ error: 'Internal server error' });

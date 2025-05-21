@@ -50,18 +50,26 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         }
 
         // Call the create-profile endpoint
-        const response = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/auth/create-profile`, {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${data.session.access_token}`,
-            'apikey': supabaseKey,
-            'Content-Type': 'application/json'
-          }
-        });
+        try {
+          const response = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/auth/create-profile`, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${data.session.access_token}`,
+              'apikey': supabaseKey,
+              'Content-Type': 'application/json'
+            }
+          });
 
-        if (!response.ok) {
-          const error = await response.json();
-          console.error('Error creating profile:', error);
+          if (!response.ok) {
+            try {
+              const error = await response.json();
+              console.error('Error creating profile:', error);
+            } catch (e) {
+              console.error('Error parsing profile creation response:', e);
+            }
+          }
+        } catch (e) {
+          console.error('Error calling create-profile endpoint:', e);
         }
       } catch (e) {
         console.error('Error calling create-profile endpoint:', e);
