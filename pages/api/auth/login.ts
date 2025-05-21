@@ -42,11 +42,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // If profile doesn't exist, create it using the create-profile endpoint
     if (profileError && profileError.code === 'PGRST116') {
       try {
+        // Get Supabase API key from environment
+        const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+        if (!supabaseKey) {
+          console.error('Supabase API key not found in environment variables');
+          return res.status(500).json({ error: 'Supabase API key not configured' });
+        }
+
         // Call the create-profile endpoint
         const response = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/auth/create-profile`, {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${data.session.access_token}`,
+            'apikey': supabaseKey,
             'Content-Type': 'application/json'
           }
         });

@@ -50,6 +50,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(500).json({ error: createError.message });
     }
 
+    // Get Supabase API key from environment
+    const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+    if (!supabaseKey) {
+      console.error('Supabase API key not found in environment variables');
+      return res.status(500).json({ error: 'Supabase API key not configured' });
+    }
+
     // Now try to create the profile
     const { data: newProfile, error: profileCreateError } = await supabase
       .from('profiles')
