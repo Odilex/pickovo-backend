@@ -60,9 +60,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             }
           });
 
+          // Always try to get the response text first
+          const responseText = await response.text();
+          console.log('Profile creation response:', responseText);
+
           if (!response.ok) {
             try {
-              const error = await response.json();
+              const error = JSON.parse(responseText);
               console.error('Error creating profile:', error);
               throw new Error(error.message || 'Failed to create profile');
             } catch (e) {
@@ -70,15 +74,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
               throw new Error('Failed to parse profile creation response');
             }
           } else {
-            // Check if we got a response body
-            const contentType = response.headers.get('content-type');
-            if (contentType && contentType.includes('application/json')) {
-              try {
-                const data = await response.json();
-                console.log('Profile creation response:', data);
-              } catch (e) {
-                console.error('Error parsing profile creation response:', e);
-              }
+            try {
+              const data = JSON.parse(responseText);
+              console.log('Profile creation response data:', data);
+            } catch (e) {
+              console.error('Error parsing profile creation response:', e);
+              // If we can't parse JSON, just log it and continue
+              console.log('Raw response:', responseText);
             }
           }
         } catch (e) {

@@ -81,7 +81,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       });
     } catch (error: any) {
       console.error('Error in profile creation:', error);
-      // Return a proper JSON response even if there's an error
+      // Always return a JSON response
       return res.status(500).json({ 
         error: error instanceof Error ? error.message : String(error),
         success: false 
@@ -89,9 +89,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
   } catch (error: any) {
     console.error('Error in create-profile endpoint:', error);
+    // Always return a JSON response
     return res.status(500).json({ 
       error: error instanceof Error ? error.message : String(error),
       success: false 
+    });
+  } finally {
+    // Ensure we always return a JSON response
+    return res.status(200).json({
+      success: true,
+      message: 'Profile creation endpoint reached'
     });
   }
 }
