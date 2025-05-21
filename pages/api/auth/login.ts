@@ -39,38 +39,24 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       .eq('id', data.user.id)
       .single();
 
-    // If profile doesn't exist, create it
+    // If profile doesn't exist, create it using the create-profile endpoint
     if (profileError && profileError.code === 'PGRST116') {
       try {
-        // First try to create profile with minimal data
-        const { data: newProfile, error: createError } = await supabase
-          .from('profiles')
-          .insert({
-            id: data.user.id,
-            role: 'customer',
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-          })
-          .select()
-          .single();
-
-        if (createError) {
-          console.error('Error creating basic profile:', createError);
-          // Try updating metadata instead
-          const { error: updateError } = await supabase.auth.updateUser({
-            data: {
-              first_name: data.user.user_metadata?.first_name || '',
-              last_name: data.user.user_metadata?.last_name || '',
-              phone_number: ''
-            }
-          });
-
-          if (updateError) {
-            console.error('Error updating user metadata:', updateError);
+        // Call the create-profile endpoint
+        const response = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/auth/create-profile`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${data.session.access_token}`,
+            'Content-Type': 'application/json'
           }
+        });
+
+        if (!response.ok) {
+          const error = await response.json();
+          console.error('Error creating profile:', error);
         }
       } catch (e) {
-        console.error('Error in profile creation:', e);
+        console.error('Error calling create-profile endpoint:', e);
       }
     }
 
