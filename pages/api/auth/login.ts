@@ -64,12 +64,26 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             try {
               const error = await response.json();
               console.error('Error creating profile:', error);
+              throw new Error(error.message || 'Failed to create profile');
             } catch (e) {
               console.error('Error parsing profile creation response:', e);
+              throw new Error('Failed to parse profile creation response');
+            }
+          } else {
+            // Check if we got a response body
+            const contentType = response.headers.get('content-type');
+            if (contentType && contentType.includes('application/json')) {
+              try {
+                const data = await response.json();
+                console.log('Profile creation response:', data);
+              } catch (e) {
+                console.error('Error parsing profile creation response:', e);
+              }
             }
           }
         } catch (e) {
           console.error('Error calling create-profile endpoint:', e);
+          throw e;
         }
       } catch (e) {
         console.error('Error calling create-profile endpoint:', e);
