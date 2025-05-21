@@ -15,10 +15,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    // Get user ID from the JWT token
-    const { user } = await supabase.auth.getUser();
+    // Get user data from the JWT token
+    const { data: { user }, error } = await supabase.auth.getUser();
     
-    if (!user) {
+    if (error || !user) {
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
