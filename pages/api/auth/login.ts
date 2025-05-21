@@ -47,7 +47,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           id: data.user.id,
           first_name: data.user.user_metadata?.first_name || '',
           last_name: data.user.user_metadata?.last_name || '',
-          email: data.user.email,
+          phone_number: '', // Add default empty phone number
           role: 'customer',
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString()
