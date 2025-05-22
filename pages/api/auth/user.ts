@@ -34,22 +34,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       
       // Check if the error is because the profile doesn't exist
       if (profileError.code === 'PGRST116') {
-        // Get the user's email from auth
-        const { data: authUser, error: authError } = await supabase.auth.getUser(userId);
-        
-        if (authError) {
-          console.error('Error fetching auth user:', authError);
-          return res.status(500).json({ error: 'Failed to fetch user data' });
-        }
-        
-        const email = authUser?.user?.email;
+        // Since we don't have the profile, we need to create one
+        // We'll use a placeholder email based on the userId since we can't reliably get the email
+        // The actual email will be synced later when the user logs in again
+        const placeholderEmail = `${userId.substring(0, 8)}@placeholder.com`;
         
         // Create a new profile for the user
         const { data: newProfile, error: insertError } = await supabase
           .from('profiles')
           .insert({
             id: userId,
-            email: email,
+            email: placeholderEmail,
             first_name: '',
             last_name: '',
             phone_number: '',
@@ -68,7 +63,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         // Return the newly created profile
         return res.status(200).json({
           id: userId,
-          email: email,
+          email: placeholderEmail,
           profile: newProfile
         });
       }
